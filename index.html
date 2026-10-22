@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mando LG TV</title>
+<style>
+  :root {
+    --bg: #0f1420;
+    --panel: #1a2032;
+    --panel2: #222942;
+    --text: #e8ebf5;
+    --muted: #8a92ab;
+    --accent: #ff5a7a;
+    --accent2: #4ea1ff;
+    --ok: #39d98a;
+    --err: #ff5a5a;
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    padding: 20px;
+    padding-bottom: 60px;
+    max-width: 480px;
+    margin: 0 auto;
+  }
+  h1 {
+    font-size: 20px;
+    margin: 10px 0 4px;
+    text-align: center;
+  }
+  .subtitle {
+    text-align: center;
+    color: var(--muted);
+    font-size: 13px;
+    margin-bottom: 20px;
+  }
+  .card {
+    background: var(--panel);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 14px;
+  }
+  .card h2 {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    margin: 0 0 12px;
+  }
+  .row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .row:last-child { margin-bottom: 0; }
+  input[type=text] {
+    flex: 1;
+    background: var(--panel2);
+    border: 1px solid #333c55;
+    color: var(--text);
+    padding: 10px 12px;
+    border-radius: 10px;
+    font-size: 14px;
+    min-width: 0;
+  }
+  button {
+    background: var(--panel2);
+    color: var(--text);
+    border: 1px solid #333c55;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 14px;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+  button:active { transform: scale(0.97); }
+  button.primary {
+    background: var(--accent2);
+    border-color: var(--accent2);
+    color: #06111f;
+    font-weight: 600;
+  }
+  button.danger {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #210a10;
+    font-weight: 600;
+  }
+  button.wide { flex: 1; }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  #status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+    font-size: 13px;
+    margin-bottom: 16px;
+  }
+  .dot {
+    width: 9px; height: 9px; border-radius: 50%;
+    background: var(--err);
+  }
+  .dot.ok { background: var(--ok); }
+  .dot.wait { background: #e8b339; }
+  .grid3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+  .volbox {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+  }
+  .volbox .val {
+    min-width: 46px;
+    text-align: center;
+    font-size: 18px;
+    font-weight: 600;
+  }
+  #apps {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+  #apps button { font-size: 12px; padding: 10px 6px; }
+  .chbox {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    margin-bottom: 14px;
+  }
+  .chbox .val {
+    min-width: 70px;
+    text-align: center;
+    font-size: 18px;
+    font-weight: 600;
+  }
+  .keypad {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+  .keypad button { font-size: 18px; padding: 14px 0; }
+  #chDisplay {
+    text-align: center;
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    margin-bottom: 10px;
+    min-height: 28px;
+    color: var(--accent2);
+  }
+  #progTitle {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+  #progDesc {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.4;
+    margin-bottom: 10px;
+  }
+  #progRaw {
+    background: #0a0e18;
+    border-radius: 10px;
+    padding: 10px;
+    font-family: Consolas, monospace;
+    font-size: 11px;
+    color: var(--muted);
+    max-height: 140px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    display: none;
+  }
+  .linkbtn {
+    background: none;
+    border: none;
+    color: var(--accent2);
+    font-size: 12px;
+    padding: 4px 0;
+    text-decoration: underline;
+    cursor: pointer;
+  }
+  #log {
+    background: #0a0e18;
+    border-radius: 10px;
+    padding: 10px;
+    font-family: Consolas, monospace;
+    font-size: 11px;
+    color: var(--muted);
+    height: 110px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+  }
+</style>
+</head>
+<body>
+
+<h1>📺 Mando LG TV</h1>
+<div class="subtitle">Control remoto casero por SSAP</div>
+
+<div id="status"><span class="dot" id="statusDot"></span><span id="statusText">Desconectado</span></div>
+
+<div class="card">
+  <h2>Conexión</h2>
+  <div class="row">
+    <input type="text" id="tvIp" placeholder="IP de la TV" value="192.168.18.4">
+    <button class="primary" id="btnConnect">Conectar</button>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Energía</h2>
+  <div class="row">
+    <button class="wide danger" id="btnPowerOff" disabled>Apagar TV</button>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Volumen</h2>
+  <div class="volbox">
+    <button id="btnVolDown" disabled>➖</button>
+    <span class="val" id="volVal">--</span>
+    <button id="btnVolUp" disabled>➕</button>
+  </div>
+  <div class="row" style="margin-top:10px">
+    <button class="wide" id="btnMute" disabled>🔇 Silencio</button>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Canales</h2>
+  <div class="chbox">
+    <button id="btnChDown" disabled>➖ Canal</button>
+    <span class="val" id="chVal">--</span>
+    <button id="btnChUp" disabled>Canal ➕</button>
+  </div>
+  <div id="chDisplay"></div>
+  <div class="keypad">
+    <button class="numKey" data-n="1" disabled>1</button>
+    <button class="numKey" data-n="2" disabled>2</button>
+    <button class="numKey" data-n="3" disabled>3</button>
+    <button class="numKey" data-n="4" disabled>4</button>
+    <button class="numKey" data-n="5" disabled>5</button>
+    <button class="numKey" data-n="6" disabled>6</button>
+    <button class="numKey" data-n="7" disabled>7</button>
+    <button class="numKey" data-n="8" disabled>8</button>
+    <button class="numKey" data-n="9" disabled>9</button>
+    <button id="btnChClear" disabled>⌫</button>
+    <button class="numKey" data-n="0" disabled>0</button>
+    <button class="primary" id="btnChGo" disabled>Ir</button>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Programa actual</h2>
+  <div class="row">
+    <button class="wide" id="btnRefreshProg" disabled>Actualizar info del canal</button>
+  </div>
+  <div id="progTitle" style="color:var(--muted)">Conecta y pulsa Actualizar</div>
+  <div id="progDesc"></div>
+  <button class="linkbtn" id="btnToggleRaw">Ver datos en bruto</button>
+  <div id="progRaw"></div>
+</div>
+
+<div class="card">
+  <h2>Entradas</h2>
+  <div class="grid3">
+    <button class="inputBtn" data-input="HDMI_1" disabled>HDMI 1</button>
+    <button class="inputBtn" data-input="HDMI_2" disabled>HDMI 2</button>
+    <button class="inputBtn" data-input="HDMI_3" disabled>HDMI 3</button>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Abrir web en la TV</h2>
+  <div class="row">
+    <input type="text" id="urlInput" placeholder="https://...">
+    <button id="btnOpenUrl" disabled>Abrir</button>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Mensaje en pantalla</h2>
+  <div class="row">
+    <input type="text" id="toastInput" placeholder="Texto a mostrar">
+    <button id="btnToast" disabled>Enviar</button>
+  </div>
+</div>
+
+<div class="card">
+  <h2>App en primer plano</h2>
+  <div class="row">
+    <button class="wide" id="btnRefreshFg" disabled>Actualizar</button>
+    <button class="wide danger" id="btnCloseFg" disabled>Cerrar</button>
+  </div>
+  <div class="row"><span id="fgApp" style="color:var(--muted);font-size:13px">—</span></div>
+</div>
+
+<div class="card">
+  <h2>Apps instaladas</h2>
+  <div id="apps"><span style="color:var(--muted);font-size:13px">Conecta para ver la lista</span></div>
+</div>
+
+<div class="card">
+  <h2>Registro</h2>
+  <div id="log"></div>
+</div>
+
+<script>
+const PAIRING = {
+  "forcePairing": false,
+  "pairingType": "PROMPT",
+  "manifest": {
+    "manifestVersion": 1,
+    "appVersion": "1.1",
+    "signed": {
+      "created": "20140509",
+      "appId": "com.lge.test",
+      "vendorId": "com.lge",
+      "localizedAppNames": {
+        "": "LG Remote App",
+        "ko-KR": "리모컨 앱",
+        "zxx-XX": "ЛГ Rэмotэ AПП"
+      },
+      "localizedVendorNames": { "": "LG Electronics" },
+      "permissions": [
+        "TEST_SECURE","CONTROL_INPUT_TEXT","CONTROL_MOUSE_AND_KEYBOARD","READ_INSTALLED_APPS",
+        "READ_LGE_SDX","READ_NOTIFICATIONS","SEARCH","WRITE_SETTINGS","WRITE_NOTIFICATION_ALERT",
+        "CONTROL_POWER","READ_CURRENT_CHANNEL","READ_RUNNING_APPS","READ_UPDATE_INFO",
+        "UPDATE_FROM_REMOTE_APP","READ_LGE_TV_INPUT_EVENTS","READ_TV_CURRENT_TIME"
+      ],
+      "serial": "2f930e2d2cfe083771f68e4fe7bb07"
+    },
+    "permissions": [
+      "LAUNCH","LAUNCH_WEBAPP","APP_TO_APP","CLOSE","TEST_OPEN","TEST_PROTECTED","CONTROL_AUDIO",
+      "CONTROL_DISPLAY","CONTROL_INPUT_JOYSTICK","CONTROL_INPUT_MEDIA_RECORDING","CONTROL_INPUT_MEDIA_PLAYBACK",
+      "CONTROL_INPUT_TV","CONTROL_POWER","READ_APP_STATUS","READ_CURRENT_CHANNEL","READ_INPUT_DEVICE_LIST",
+      "READ_NETWORK_STATE","READ_RUNNING_APPS","READ_TV_CHANNEL_LIST","WRITE_NOTIFICATION_TOAST",
+      "READ_POWER_STATE","READ_COUNTRY_INFO","READ_SETTINGS","CONTROL_TV_SCREEN","CONTROL_TV_STANBY",
+      "CONTROL_FAVORITE_GROUP","CONTROL_USER_INFO","CHECK_BLUETOOTH_DEVICE","CONTROL_BLUETOOTH",
+      "CONTROL_TIMER_INFO","STB_INTERNAL_CONNECTION","CONTROL_RECORDING","READ_RECORDING_STATE",
+      "WRITE_RECORDING_LIST","READ_RECORDING_LIST","READ_RECORDING_SCHEDULE","WRITE_RECORDING_SCHEDULE",
+      "READ_STORAGE_DEVICE_LIST","READ_TV_PROGRAM_INFO","CONTROL_BOX_CHANNEL","READ_TV_ACR_AUTH_TOKEN",
+      "READ_TV_CONTENT_STATE","READ_TV_CURRENT_TIME","ADD_LAUNCHER_CHANNEL","SET_CHANNEL_SKIP",
+      "RELEASE_CHANNEL_SKIP","CONTROL_CHANNEL_BLOCK","DELETE_SELECT_CHANNEL","CONTROL_CHANNEL_GROUP",
+      "SCAN_TV_CHANNELS","CONTROL_TV_POWER","CONTROL_WOL"
+    ],
+    "signatures": [{
+      "signatureVersion": 1,
+      "signature": "eyJhbGdvcml0aG0iOiJSU0EtU0hBMjU2Iiwia2V5SWQiOiJ0ZXN0LXNpZ25pbmctY2VydCIsInNpZ25hdHVyZVZlcnNpb24iOjF9.hrVRgjCwXVvE2OOSpDZ58hR+59aFNwYDyjQgKk3auukd7pcegmE2CzPCa0bJ0ZsRAcKkCTJrWo5iDzNhMBWRyaMOv5zWSrthlf7G128qvIlpMT0YNY+n/FaOHE73uLrS/g7swl3/qH/BGFG2Hu4RlL48eb3lLKqTt2xKHdCs6Cd4RMfJPYnzgvI4BNrFUKsjkcu+WD4OO2A27Pq1n50cMchmcaXadJhGrOqH5YmHdOCj5NSHzJYrsW0HPlpuAx/ECMeIZYDh6RMqaFM2DXzdKX9NmmyqzJ3o/0lkk/N97gfVRLW5hA29yeAwaCViZNCP8iC9aO0q9fQojoa7NQnAtw=="
+    }]
+  }
+};
+
+let ws = null;
+let foregroundAppId = null;
+let channelMap = {};
+let chBuffer = '';
+const pending = {};
+
+const els = {
+  tvIp: document.getElementById('tvIp'),
+  btnConnect: document.getElementById('btnConnect'),
+  statusDot: document.getElementById('statusDot'),
+  statusText: document.getElementById('statusText'),
+  log: document.getElementById('log'),
+  volVal: document.getElementById('volVal'),
+  apps: document.getElementById('apps'),
+  fgApp: document.getElementById('fgApp'),
+  chVal: document.getElementById('chVal'),
+  chDisplay: document.getElementById('chDisplay'),
+  progTitle: document.getElementById('progTitle'),
+  progDesc: document.getElementById('progDesc'),
+  progRaw: document.getElementById('progRaw'),
+};
+
+function log(msg) {
+  const t = new Date().toLocaleTimeString();
+  els.log.textContent += `[${t}] ${msg}\n`;
+  els.log.scrollTop = els.log.scrollHeight;
+}
+
+function setStatus(state, text) {
+  els.statusDot.className = 'dot' + (state ? ' ' + state : '');
+  els.statusText.textContent = text;
+}
+
+function setControlsEnabled(enabled) {
+  document.querySelectorAll('button').forEach(b => {
+    if (b.id !== 'btnConnect') b.disabled = !enabled;
+  });
+}
+
+function keyFor(ip) { return 'lgtv_clientkey_' + ip; }
+
+function send(type, uri, payload) {
+  const id = 'req_' + Math.random().toString(36).slice(2, 10);
+  const msg = { id, type, uri, payload: payload || {} };
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify(msg));
+  }
+  return id;
+}
+
+function request(uri, payload, cb) {
+  const id = send('request', uri, payload);
+  if (cb) pending[id] = cb;
+}
+
+function connect() {
+  const ip = els.tvIp.value.trim();
+  if (!ip) return;
+  localStorage.setItem('lgtv_lastip', ip);
+
+  setStatus('wait', 'Conectando...');
+  log(`Conectando a ws://${ip}:3000 ...`);
+  ws = new WebSocket(`ws://${ip}:3000`);
+
+  ws.onopen = () => {
+    log('Socket abierto, emparejando...');
+    const pairing = JSON.parse(JSON.stringify(PAIRING));
+    const savedKey = localStorage.getItem(keyFor(ip));
+    if (savedKey) pairing['client-key'] = savedKey;
+    send('register', undefined, pairing);
+  };
+
+  ws.onclose = () => {
+    setStatus('', 'Desconectado');
+    setControlsEnabled(false);
+    log('Conexión cerrada.');
+  };
+
+  ws.onerror = (e) => {
+    log('Error de conexión. ¿IP correcta y misma red?');
+  };
+
+  ws.onmessage = (ev) => {
+    let msg;
+    try { msg = JSON.parse(ev.data); } catch { return; }
+
+    if (msg.type === 'registered') {
+      localStorage.setItem(keyFor(ip), msg.payload['client-key']);
+      setStatus('ok', 'Conectado y emparejado');
+      setControlsEnabled(true);
+      log('Emparejado correctamente. Clave guardada.');
+      refreshVolume();
+      refreshApps();
+      refreshForeground();
+      refreshChannelList();
+      refreshCurrentChannel();
+      refreshProgramInfo();
+      return;
+    }
+
+    if (msg.type === 'response' && msg.payload && msg.payload.pairingType === 'PROMPT') {
+      setStatus('wait', 'Acepta el emparejamiento en la TV...');
+      log('Esperando que aceptes el aviso en la pantalla de la TV.');
+      return;
+    }
+
+    if (msg.type === 'error') {
+      log('Error: ' + msg.error);
+      return;
+    }
+
+    if (msg.id && pending[msg.id]) {
+      pending[msg.id](msg.payload);
+      delete pending[msg.id];
+    }
+  };
+}
+
+function refreshVolume() {
+  request('ssap://audio/getVolume', {}, (p) => {
+    if (typeof p.volume !== 'undefined') els.volVal.textContent = p.volume;
+  });
+}
+
+function refreshForeground() {
+  request('ssap://com.webos.applicationManager/getForegroundAppInfo', {}, (p) => {
+    foregroundAppId = p.appId || null;
+    els.fgApp.textContent = foregroundAppId || '—';
+  });
+}
+
+function refreshChannelList() {
+  request('ssap://tv/getChannelList', {}, (p) => {
+    const list = p.channelList || [];
+    channelMap = {};
+    list.forEach(ch => { channelMap[String(ch.channelNumber)] = ch.channelId; });
+    log(`Canales cargados: ${list.length}`);
+    if (list.length === 0) log('Sin canales sintonizados (¿TV sin antena/cable configurado?)');
+  });
+}
+
+function refreshCurrentChannel() {
+  request('ssap://tv/getCurrentChannel', {}, (p) => {
+    if (p && p.channelNumber) els.chVal.textContent = p.channelNumber;
+  });
+}
+
+function pickField(obj, candidates) {
+  for (const key of candidates) {
+    if (obj && typeof obj[key] === 'string' && obj[key].trim()) return obj[key];
+  }
+  return null;
+}
+
+function refreshProgramInfo() {
+  request('ssap://tv/getChannelProgramInfo', {}, (p) => {
+    els.progRaw.textContent = JSON.stringify(p, null, 2);
+
+    // La respuesta puede traer el programa suelto o dentro de una lista "programs"/"programList"
+    const list = p.programs || p.programList || p.program || [];
+    const prog = Array.isArray(list) ? list[0] : list;
+    const source = prog || p;
+
+    const title = pickField(source, [
+      'programName', 'localizedProgramTitle', 'title', 'programTitle', 'name'
+    ]);
+    const desc = pickField(source, [
+      'programDescription', 'description', 'longDescription', 'extendedDescription', 'synopsis', 'summary'
+    ]);
+
+    els.progTitle.textContent = title || '(Título no disponible en el formato de esta TV)';
+    els.progTitle.style.color = title ? 'var(--text)' : 'var(--muted)';
+    els.progDesc.textContent = desc || 'Sin sinopsis disponible — mira "Ver datos en bruto" por si viene con otro nombre de campo.';
+  });
+}
+
+document.getElementById('btnToggleRaw').onclick = () => {
+  els.progRaw.style.display = els.progRaw.style.display === 'none' ? 'block' : 'none';
+};
+
+document.getElementById('btnRefreshProg').onclick = refreshProgramInfo;
+
+function refreshApps() {
+  request('ssap://com.webos.applicationManager/listApps', {}, (p) => {
+    const list = p.apps || [];
+    els.apps.innerHTML = '';
+    list.slice(0, 30).forEach(app => {
+      const b = document.createElement('button');
+      b.textContent = app.title || app.id;
+      b.onclick = () => {
+        request('ssap://system.launcher/launch', { id: app.id }, () => log('Lanzado: ' + app.id));
+      };
+      els.apps.appendChild(b);
+    });
+    if (list.length === 0) els.apps.innerHTML = '<span style="color:var(--muted);font-size:13px">Sin apps listadas</span>';
+  });
+}
+
+els.btnConnect.onclick = connect;
+
+document.getElementById('btnPowerOff').onclick = () => {
+  request('ssap://system/turnOff', {}, () => log('Apagando TV...'));
+};
+
+document.getElementById('btnVolUp').onclick = () => {
+  request('ssap://audio/volumeUp', {}, refreshVolume);
+};
+document.getElementById('btnVolDown').onclick = () => {
+  request('ssap://audio/volumeDown', {}, refreshVolume);
+};
+document.getElementById('btnMute').onclick = () => {
+  request('ssap://audio/setMute', { mute: true }, () => log('Silenciado'));
+};
+
+document.getElementById('btnChUp').onclick = () => {
+  request('ssap://tv/channelUp', {}, () => setTimeout(() => { refreshCurrentChannel(); refreshProgramInfo(); }, 600));
+};
+document.getElementById('btnChDown').onclick = () => {
+  request('ssap://tv/channelDown', {}, () => setTimeout(() => { refreshCurrentChannel(); refreshProgramInfo(); }, 600));
+};
+
+function updateChDisplay() {
+  els.chDisplay.textContent = chBuffer;
+}
+
+document.querySelectorAll('.numKey').forEach(b => {
+  b.onclick = () => {
+    if (chBuffer.length >= 4) return;
+    chBuffer += b.dataset.n;
+    updateChDisplay();
+  };
+});
+
+document.getElementById('btnChClear').onclick = () => {
+  chBuffer = chBuffer.slice(0, -1);
+  updateChDisplay();
+};
+
+document.getElementById('btnChGo').onclick = () => {
+  if (!chBuffer) return;
+  const channelId = channelMap[chBuffer];
+  if (!channelId) {
+    log(`Canal ${chBuffer} no encontrado en la lista sintonizada`);
+    return;
+  }
+  request('ssap://tv/openChannel', { channelId }, () => {
+    log('Sintonizando canal ' + chBuffer);
+    chBuffer = '';
+    updateChDisplay();
+    setTimeout(() => { refreshCurrentChannel(); refreshProgramInfo(); }, 800);
+  });
+};
+
+document.querySelectorAll('.inputBtn').forEach(b => {
+  b.onclick = () => {
+    request('ssap://tv/switchInput', { inputId: b.dataset.input }, () => log('Cambiado a ' + b.dataset.input));
+  };
+});
+
+document.getElementById('btnOpenUrl').onclick = () => {
+  const url = document.getElementById('urlInput').value.trim();
+  if (!url) return;
+  request('ssap://system.launcher/launch', { id: 'com.webos.app.browser', params: { target: url } },
+    () => log('Abierto: ' + url));
+};
+
+document.getElementById('btnToast').onclick = () => {
+  const text = document.getElementById('toastInput').value.trim();
+  if (!text) return;
+  request('ssap://system.notifications/createToast', { message: text }, () => log('Mensaje enviado'));
+};
+
+document.getElementById('btnRefreshFg').onclick = refreshForeground;
+document.getElementById('btnCloseFg').onclick = () => {
+  if (!foregroundAppId) return log('No hay app en primer plano detectada');
+  request('ssap://system.launcher/close', { id: foregroundAppId }, () => {
+    log('Cerrado: ' + foregroundAppId);
+    refreshForeground();
+  });
+};
+
+window.onload = () => {
+  const lastIp = localStorage.getItem('lgtv_lastip');
+  if (lastIp) els.tvIp.value = lastIp;
+};
+</script>
+
+</body>
+</html>
