@@ -266,7 +266,13 @@
   <div class="row">
     <button class="wide" id="btnRefreshProg" disabled>Actualizar info del canal</button>
   </div>
-  <div id="progTitle" style="color:var(--muted)">Conecta y pulsa Actualizar</div>
+  <div class="row" id="progHeader" style="align-items:center">
+    <img id="progLogo" style="display:none;width:48px;height:36px;object-fit:contain;background:#fff;border-radius:6px" />
+    <div style="flex:1">
+      <div id="progTitle" style="color:var(--muted)">Conecta y pulsa Actualizar</div>
+      <div id="progTime" style="color:var(--muted);font-size:12px"></div>
+    </div>
+  </div>
   <div id="progDesc"></div>
   <button class="linkbtn" id="btnToggleRaw">Ver datos en bruto</button>
   <div id="progRaw"></div>
@@ -380,8 +386,10 @@ const els = {
   chVal: document.getElementById('chVal'),
   chDisplay: document.getElementById('chDisplay'),
   progTitle: document.getElementById('progTitle'),
+  progTime: document.getElementById('progTime'),
   progDesc: document.getElementById('progDesc'),
   progRaw: document.getElementById('progRaw'),
+  progLogo: document.getElementById('progLogo'),
 };
 
 function log(msg) {
@@ -515,32 +523,60 @@ function refreshCurrentChannel() {
   });
 }
 
-function pickField(obj, candidates) {
-  for (const key of candidates) {
-    if (obj && typeof obj[key] === 'string' && obj[key].trim()) return obj[key];
-  }
-  return null;
+function parseLgDate(str) {
+  // Formato de esta TV: "AAAA,MM,DD,HH,mm,ss"
+  if (!str) return null;
+  const parts = str.split(',').map(Number);
+  if (parts.length < 6 || parts.some(isNaN)) return null;
+  const [y, mo, d, h, mi, s] = parts;
+  return new Date(y, mo - 1, d, h, mi, s);
+}
+
+function fmtTime(d) {
+  return d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
 }
 
 function refreshProgramInfo() {
   request('ssap://tv/getChannelProgramInfo', {}, (p) => {
     els.progRaw.textContent = JSON.stringify(p, null, 2);
 
-    // La respuesta puede traer el programa suelto o dentro de una lista "programs"/"programList"
-    const list = p.programs || p.programList || p.program || [];
-    const prog = Array.isArray(list) ? list[0] : list;
-    const source = prog || p;
+    const list = p.programList || p.programs || p.program || [];
+    const now = new Date();
 
-    const title = pickField(source, [
-      'programName', 'localizedProgramTitle', 'title', 'programTitle', 'name'
-    ]);
-    const desc = pickField(source, [
-      'programDescription', 'description', 'longDescription', 'extendedDescription', 'synopsis', 'summary'
-    ]);
+    let current = list.find(prog => {
+      const start = parseLgDate(prog.localStartTime || prog.startTime);
+      const end = parseLgDate(prog.localEndTime || prog.endTime);
+      return start && end && now >= start && now < end;
+    });
+    if (!current) current = list[0];
 
-    els.progTitle.textContent = title || '(Título no disponible en el formato de esta TV)';
+    // Logo: solo es una URL real en algunos canales IP; en TDT es una ruta interna de la TV, no visible desde fuera.
+    const logoUrl = p.channel && p.channel.imgUrl;
+    if (logoUrl && /^https?:\/\//i.test(logoUrl)) {
+      els.progLogo.src = logoUrl;
+      els.progLogo.style.display = 'block';
+    } else {
+      els.progLogo.style.display = 'none';
+    }
+
+    if (!current) {
+      els.progTitle.textContent = '(Sin información de programa)';
+      els.progTitle.style.color = 'var(--muted)';
+      els.progTime.textContent = '';
+      els.progDesc.textContent = '';
+      return;
+    }
+
+    const title = current.programName || current.title || current.localizedProgramTitle;
+    els.progTitle.textContent = title || '(Sin título)';
     els.progTitle.style.color = title ? 'var(--text)' : 'var(--muted)';
-    els.progDesc.textContent = desc || 'Sin sinopsis disponible — mira "Ver datos en bruto" por si viene con otro nombre de campo.';
+
+    const start = parseLgDate(current.localStartTime || current.startTime);
+    const end = parseLgDate(current.localEndTime || current.endTime);
+    els.progTime.textContent = (start && end) ? `${fmtTime(start)} - ${fmtTime(end)}` : '';
+
+    const desc = current.programDescription || current.description || current.longDescription || current.synopsis;
+    els.progDesc.textContent = desc || 'Esta TV no proporciona sinopsis para este canal (solo título y horario).';
   });
 }
 
