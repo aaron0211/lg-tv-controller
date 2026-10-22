@@ -422,9 +422,15 @@ function connect() {
   if (!ip) return;
   localStorage.setItem('lgtv_lastip', ip);
 
+  const secure = window.location.protocol === 'https:';
+  const wsUrl = secure ? `wss://${ip}:3001` : `ws://${ip}:3000`;
+
   setStatus('wait', 'Conectando...');
-  log(`Conectando a ws://${ip}:3000 ...`);
-  ws = new WebSocket(`ws://${ip}:3000`);
+  log(`Conectando a ${wsUrl} ...`);
+  if (secure) {
+    log(`Nota: si falla, abre primero https://${ip}:3001 en una pestaña y acepta el aviso de certificado, luego vuelve aquí.`);
+  }
+  ws = new WebSocket(wsUrl);
 
   ws.onopen = () => {
     log('Socket abierto, emparejando...');
