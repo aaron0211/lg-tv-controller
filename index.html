@@ -281,17 +281,10 @@
 <div class="card">
   <h2>Entradas</h2>
   <div class="grid3">
+    <button id="btnTvInput" disabled>TV</button>
     <button class="inputBtn" data-input="HDMI_1" disabled>HDMI 1</button>
     <button class="inputBtn" data-input="HDMI_2" disabled>HDMI 2</button>
     <button class="inputBtn" data-input="HDMI_3" disabled>HDMI 3</button>
-  </div>
-</div>
-
-<div class="card">
-  <h2>Abrir web en la TV</h2>
-  <div class="row">
-    <input type="text" id="urlInput" placeholder="https://...">
-    <button id="btnOpenUrl" disabled>Abrir</button>
   </div>
 </div>
 
@@ -587,8 +580,8 @@ document.getElementById('btnToggleRaw').onclick = () => {
 document.getElementById('btnRefreshProg').onclick = refreshProgramInfo;
 
 function refreshApps() {
-  request('ssap://com.webos.applicationManager/listApps', {}, (p) => {
-    const list = p.apps || [];
+  request('ssap://com.webos.applicationManager/listLaunchPoints', {}, (p) => {
+    const list = p.launchPoints || [];
     els.apps.innerHTML = '';
     list.slice(0, 30).forEach(app => {
       const b = document.createElement('button');
@@ -663,11 +656,8 @@ document.querySelectorAll('.inputBtn').forEach(b => {
   };
 });
 
-document.getElementById('btnOpenUrl').onclick = () => {
-  const url = document.getElementById('urlInput').value.trim();
-  if (!url) return;
-  request('ssap://system.launcher/launch', { id: 'com.webos.app.browser', params: { target: url } },
-    () => log('Abierto: ' + url));
+document.getElementById('btnTvInput').onclick = () => {
+  request('ssap://system.launcher/launch', { id: 'com.webos.app.livetv' }, () => log('Volviendo a TV en directo'));
 };
 
 document.getElementById('btnToast').onclick = () => {
